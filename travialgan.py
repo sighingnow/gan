@@ -18,8 +18,8 @@ from mlutils import structuralize
 
 class Generator(nn.Module):
     def __init__(self, config):
-        self.config = config
         super(Generator, self).__init__()
+        self.config = config
         self.model = nn.Sequential(
             nn.Linear(config.in_size, config.hidden_size),
             nn.ELU(),
@@ -33,8 +33,8 @@ class Generator(nn.Module):
 
 class Discriminator(nn.Module):
     def __init__(self, config):
-        self.config = config
         super(Discriminator, self).__init__()
+        self.config = config
         self.model = nn.Sequential(
             nn.Linear(config.in_size, config.hidden_size),
             nn.ELU(),
@@ -53,7 +53,7 @@ def get_distr_sampler(mu, sigma):
 def get_generator_sampler():
     return lambda batch_size, dim: torch.rand((batch_size, dim))
 
-class GANTrivial(object):
+class TrivialGAN(object):
     def __init__(self, config):
         self.config = config
         self.G = Generator(config.g)
@@ -147,5 +147,5 @@ if __name__ == '__main__':
         'print_interval': 100,
     }
 
-    gan = GANTrivial(structuralize('config', **basic_config))
+    gan = TrivialGAN(structuralize('config', **basic_config))
     gan.train()
