@@ -9,6 +9,7 @@ Reference:
 '''
 
 import logging
+import sys
 
 import torch
 import torch.nn as nn
@@ -82,6 +83,7 @@ class TrivialGAN(object):
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.INFO)
+        self.logger.handlers = [logging.StreamHandler(sys.stderr)]
 
     def train(self):
         d_sampler = lambda batch_size, dim: torch.randn((batch_size, dim)).mul(1.2).add(4.6)

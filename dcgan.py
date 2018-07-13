@@ -11,6 +11,7 @@ Reference:
 
 import argparse
 import logging
+import sys
 
 import torch
 import torch.nn as nn
@@ -181,6 +182,7 @@ parser.add_argument('--verbose', action='store_true')
 if __name__ == '__main__':
     logger = logging.getLogger('DCGAN')
     logger.setLevel(logging.INFO)
+    logger.handlers = [logging.StreamHandler(sys.stderr)]
 
     opt = parser.parse_args()
 
