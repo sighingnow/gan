@@ -1,6 +1,13 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+'''
+A trivial GAN implmentation to generate Guassian distribution.
+
+Reference:
+[1]: `Generative Adversarial Nets, NIPS 2014 <https://papers.nips.cc/paper/5423-generative-adversarial-nets>`_
+'''
+
 import logging
 
 import torch
@@ -51,7 +58,21 @@ class GANTrivial(object):
         self.config = config
         self.G = Generator(config.g)
         self.D = Discriminator(config.d)
+
+        # Why BCELoss is ok ?
+        #
+        # In original paper [1], we have
+        #
+        #   Loss_d = \max { E[log(D(x))] + E[log(1-D(G(z)))] }
+        #   Loss_g = \min { E[log(1 - D(G(z)))] } = \max { E[log(D(G(x)))] }
+        #
+        # We have `I` as the labels of real data, and `o` as the labels of fake data,
+        # then the loss function is equivalent to BCELoss.
+        #
+        #   BCELoss(x, y) = - (y*x + (1-y)*log(1-x))
+        #
         self.loss = nn.BCELoss()
+
         self.optim_g = optim.Adam(self.G.parameters(),
                                   lr=config.g.learning_rate,
                                   betas=config.g.betas)
