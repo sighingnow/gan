@@ -177,7 +177,9 @@ class DCGAN(object):
             if epoch % self.config.print_interval == 0:
                 self.logger.info('epoch[%3d]: d_error: %f, g_fake_error: %f',
                                  epoch, d_error.mean(), g_fake_error.mean())
-                fixed_fake_data = gan.G(fixed_noise)
+                self.G.eval()
+                fixed_fake_data = self.G(fixed_noise)
+                self.G.train()
                 vutils.save_image(fixed_fake_data.detach(), 'fake_samples_epoch_%03d.png' % epoch, normalize=True)
 
 parser = argparse.ArgumentParser()
