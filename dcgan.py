@@ -146,17 +146,18 @@ class DCGAN(object):
         fixed_noise = torch.randn(self.config.batch_size, self.config.g.in_channels, 1, 1,
                                   device=self.config.device)
 
-        for epoch in range(self.config.num_epoch):
+        for epoch in range(1, self.config.num_epoch + 1):
             for _i, data in enumerate(self.dataset, 0):
                 self.D.zero_grad()
 
-                noise = torch.randn(self.config.batch_size, self.config.g.in_channels, 1, 1,
+                real_data = data[0].to(self.config.device)
+                batch_size = real_data[0].size()[0]
+                noise = torch.randn(batch_size, self.config.g.in_channels, 1, 1,
                                     device=self.config.device)
-                real_data = data[0].to(device)
                 fake_data = self.G(noise)
 
-                real_label = torch.ones((self.config.batch_size,), device=self.config.device)
-                fake_label = torch.zeros((self.config.batch_size,), device=self.config.device)
+                real_label = torch.ones((batch_size, 1), device=self.config.device)
+                fake_label = torch.zeros((batch_size, 1), device=self.config.device)
 
                 d_real_error = self.loss(self.D(real_data), real_label)
                 d_fake_error = self.loss(self.D(fake_data.detach()), fake_label)
@@ -165,9 +166,13 @@ class DCGAN(object):
                 d_error.backward()
                 self.optim_d.step()
 
+                self.G.zero_grad()
+
                 g_fake_error = self.loss(self.D(fake_data), real_label)
                 g_fake_error.backward()
                 self.optim_g.step()
+
+            self.logger.info('Finish epoch %d' % epoch)
 
             if epoch % self.config.print_interval == 0:
                 self.logger.info('epoch[%3d]: d_error: %f, g_fake_error: %f',
@@ -207,7 +212,7 @@ if __name__ == '__main__':
         },
         'device': device,
         'batch_size': 64,
-        'num_epoch': 40,
+        'num_epoch': 5,
         'print_interval': 5,
         'verbose': opt.verbose,
         'dataset': ('mnist', 'dataset/data/mnist'), # ('lfw', './dataset/data/lfw-deepfunneled')
