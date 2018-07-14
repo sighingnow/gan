@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 '''
-Deep convolutional GAN.
+Wasserstein GAN.
 
 Reference:
-[1]: `Unsupervised Representation Learning with Deep Convolutional Generative
-     Adversarial Networks, ICLR 2016 <http://arxiv.org/abs/1511.06434>`_
+[1]: `Wasserstein Generative Adversarial Networks, ICML 2017,
+     <http://proceedings.mlr.press/v70/arjovsky17a.html>`_
 '''
 
 import argparse
@@ -74,13 +74,13 @@ class Discriminator(nn.Module):
             nn.LeakyReLU(0.2, inplace=True),
             nn.Conv2d(64 * 8, 1,
                       4, 1, 0, bias=False), # 1 x 1 x 1
-            nn.Sigmoid(),
+            # Don't add an extra Sigmoid layer at the end of discriminator.
         )
 
     def forward(self, *x):
         return self.model(*x).view(-1, 1).squeeze(1)
 
-class DCGAN(object):
+class WGAN(object):
     def __init__(self, config, logger):
         self.config = config
         self.logger = logger
@@ -95,14 +95,10 @@ class DCGAN(object):
             self.logger.info(self.G)
             self.logger.info(self.D)
 
-        self.loss = nn.BCELoss()
-
-        self.optim_g = optim.Adam(self.G.parameters(),
-                                  lr=config.g.learning_rate,
-                                  betas=config.g.betas)
-        self.optim_d = optim.Adam(self.D.parameters(),
-                                  lr=config.d.learning_rate,
-                                  betas=config.d.betas)
+        self.optim_g = optim.RMSprop(self.G.parameters(),
+                                     lr=config.g.learning_rate)
+        self.optim_d = optim.RMSprop(self.D.parameters(),
+                                     lr=config.d.learning_rate)
 
         self.dataset = self.load_data()
 
@@ -116,38 +112,29 @@ class DCGAN(object):
             m.bias.data.zero_()
 
     def load_data(self):
-        if self.config.dataset[0] == 'mnist':
-            dataset = vdatasets.MNIST(
-                root=self.config.dataset[1],
-                transform=vtransforms.Compose([
-                    vtransforms.Resize(64),
-                    vtransforms.CenterCrop(64),
-                    vtransforms.ToTensor(),
-                    vtransforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-                ]))
-        elif self.config.dataset[0] == 'lfw':
-            dataset = vdatasets.ImageFolder(
-                root=self.config.dataset[1],
-                transform=vtransforms.Compose([
-                    vtransforms.Resize(64),
-                    vtransforms.CenterCrop(64),
-                    vtransforms.ToTensor(),
-                    vtransforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-                ]))
-        else:
-            self.logger.critical('%s is not a valid dataset' % self.config.dataset[0])
+        dataset = vdatasets.MNIST(
+            root=self.config.datadir,
+            transform=vtransforms.Compose([
+                vtransforms.Resize(64),
+                vtransforms.CenterCrop(64),
+                vtransforms.ToTensor(),
+                vtransforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            ]))
         return utils.data.DataLoader(dataset,
                                      batch_size=self.config.batch_size,
                                      shuffle=True,
                                      num_workers=2)
 
-    def train(self):
+    def train(self, num_epoch=None, start_epoch=1):
+        if num_epoch is None:
+            num_epoch = self.config.num_epoch
+
         # used to inspect the intermedia result of the models.
         fixed_noise = torch.randn(self.config.batch_size, self.config.g.in_channels, 1, 1,
                                   device=self.config.device)
 
-        for epoch in range(1, self.config.num_epoch + 1):
-            for _i, data in enumerate(self.dataset, 0):
+        for epoch in range(start_epoch, num_epoch + start_epoch):
+            for i, data in enumerate(self.dataset, 0):
                 self.D.zero_grad()
 
                 real_data = data[0].to(self.config.device)
@@ -156,40 +143,40 @@ class DCGAN(object):
                                     device=self.config.device)
                 fake_data = self.G(noise)
 
-                real_label = torch.ones((batch_size, 1), device=self.config.device)
-                fake_label = torch.zeros((batch_size, 1), device=self.config.device)
-
-                d_real_error = self.loss(self.D(real_data), real_label)
-                d_fake_error = self.loss(self.D(fake_data.detach()), fake_label)
-
-                d_error = (d_real_error + d_fake_error) / 2
+                d_error = - (torch.mean(self.D(real_data)) - torch.mean(self.D(fake_data.detach())))
                 d_error.backward()
                 self.optim_d.step()
 
-                self.G.zero_grad()
+                for param in self.D.parameters():
+                    param.data.clamp_(-0.01, 0.01) # IMPORTANT !
 
-                g_fake_error = self.loss(self.D(fake_data), real_label)
-                g_fake_error.backward()
-                self.optim_g.step()
+                if (i + 1) % self.config.ncritic == 0:
+                    self.G.zero_grad()
+                    g_error = - torch.mean(self.D(fake_data))
+                    g_error.backward()
+                    self.optim_g.step()
 
             self.logger.info('Finish epoch %d' % epoch)
 
             if epoch % self.config.print_interval == 0:
-                self.logger.info('epoch[%3d]: d_error: %f, g_fake_error: %f',
-                                 epoch, d_error.mean(), g_fake_error.mean())
+                self.logger.info('epoch[%3d]: d_error: %f, g_error: %f',
+                                 epoch, d_error.mean(), g_error.mean())
                 self.G.eval()
                 fixed_fake_data = self.G(fixed_noise)
                 self.G.train()
-                vutils.save_image(fixed_fake_data.detach(), 'dcgan_fake_samples_epoch_%03d.png' % epoch, normalize=True)
+                vutils.save_image(fixed_fake_data.detach(), 'wgan_fake_samples_epoch_%03d.png' % epoch, normalize=True)
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--cuda', action='store_true')
 parser.add_argument('--verbose', action='store_true')
 
 if __name__ == '__main__':
-    logger = logging.getLogger('DCGAN')
+    logger = logging.getLogger('WGAN')
     logger.setLevel(logging.INFO)
-    logger.handlers = [logging.StreamHandler(sys.stderr)]
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(logging.Formatter('%(asctime)s[%(name)s]%(levelname)s - %(message)s', '%m-%d %H:%M:%S'))
+    logger.handlers = [handler]
 
     opt = parser.parse_args()
 
@@ -203,22 +190,23 @@ if __name__ == '__main__':
         device = 'cpu'
 
     basic_config = {
+        # NB: the original paper use 0.00005 as learning rate, however in the experiment I found
+        # that 0.0005 is ok to training the mnist dataset.
         'g': {
             'in_channels': 100,
-            'learning_rate': 2e-4,
-            'betas': (0.5, 0.999),
+            'learning_rate': 0.0005,
         },
         'd': {
-            'learning_rate': 2e-4,
-            'betas': (0.5, 0.999),
+            'learning_rate': 0.0005,
         },
+        'ncritic': 5,
         'device': device,
         'batch_size': 64,
-        'num_epoch': 5,
+        'num_epoch': 20,
         'print_interval': 5,
         'verbose': opt.verbose,
-        'dataset': ('mnist', 'dataset/data/mnist'), # ('lfw', './dataset/data/lfw-deepfunneled')
+        'datadir': './dataset/data/mnist',
     }
 
-    gan = DCGAN(structuralize('config', **basic_config), logger)
+    gan = WGAN(structuralize('config', **basic_config), logger)
     gan.train()
