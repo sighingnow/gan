@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 '''
-A trivial GAN implmentation to generate Guassian distribution.
+A vanilla GAN implmentation to generate Guassian distribution.
 
 Reference:
 [1]: `Generative Adversarial Nets, NIPS 2014 <https://papers.nips.cc/paper/5423-generative-adversarial-nets>`_
@@ -54,7 +54,7 @@ def get_distr_sampler(mu, sigma):
 def get_generator_sampler():
     return lambda batch_size, dim: torch.rand((batch_size, dim))
 
-class TrivialGAN(object):
+class VanillaGAN(object):
     def __init__(self, config):
         self.config = config
         self.G = Generator(config.g)
@@ -149,5 +149,5 @@ if __name__ == '__main__':
         'print_interval': 100,
     }
 
-    gan = TrivialGAN(structuralize('config', **basic_config))
+    gan = VanillaGAN(structuralize('config', **basic_config))
     gan.train()
