@@ -27,7 +27,7 @@ class Generator(nn.Module):
     def __init__(self, config):
         super(Generator, self).__init__()
         self.config = config
-        self.model = nn.Sequential(                  # input: (config.in_channels, 1, 1)
+        self.model = nn.Sequential(                  # input: config.in_channels x 1 x 1
             nn.ConvTranspose2d(config.in_channels, 64 * 8,
                                4, 1, 0, bias=False), # (64 * 8) x 4 x 4
             nn.BatchNorm2d(64 * 8),
@@ -56,7 +56,7 @@ class Discriminator(nn.Module):
     def __init__(self, config):
         super(Discriminator, self).__init__()
         self.config = config
-        self.model = nn.Sequential(         # input: 3 x 64 x 64
+        self.model = nn.Sequential(         # input: 1 x 64 x 64
             nn.Conv2d(1, 64 * 1,
                       4, 2, 1, bias=False), # (64 * 1) x 32 x 32
             nn.LeakyReLU(0.2, inplace=True),
