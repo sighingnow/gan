@@ -151,7 +151,7 @@ class DCGAN(object):
                 self.D.zero_grad()
 
                 real_data = data[0].to(self.config.device)
-                batch_size = real_data[0].size()[0]
+                batch_size = real_data.size()[0]
                 noise = torch.randn(batch_size, self.config.g.in_channels, 1, 1,
                                     device=self.config.device)
                 fake_data = self.G(noise)
