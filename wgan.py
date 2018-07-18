@@ -78,7 +78,7 @@ class Discriminator(nn.Module):
         )
 
     def forward(self, *x):
-        return self.model(*x).view(-1, 1).squeeze(1)
+        return self.model(*x).view(-1, 1)
 
 class WGAN(object):
     def __init__(self, config, logger):

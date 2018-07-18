@@ -78,7 +78,7 @@ class Discriminator(nn.Module):
         )
 
     def forward(self, *x):
-        return self.model(*x).view(-1, 1).squeeze(1)
+        return self.model(*x).view(-1, 1)
 
 class DCGAN(object):
     def __init__(self, config, logger):
@@ -171,8 +171,6 @@ class DCGAN(object):
                 g_fake_error = self.loss(self.D(fake_data), real_label)
                 g_fake_error.backward()
                 self.optim_g.step()
-
-            self.logger.info('Finish epoch %d' % epoch)
 
             if epoch % self.config.print_interval == 0:
                 self.logger.info('epoch[%3d]: d_error: %f, g_fake_error: %f',

@@ -22,19 +22,7 @@ import torchvision.transforms as vtransforms
 import torchvision.utils as vutils
 
 from mlutils import find_gpu, structuralize
-
-class Flatten(nn.Module):
-    # pylint: disable=arguments-differ
-    def forward(self, x):
-        return x.view(x.size(0), -1)
-
-class Reshape(nn.Module):
-    def __init__(self, *size):
-        super(Reshape, self).__init__()
-        self.shape = size
-    # pylint: disable=arguments-differ
-    def forward(self, x):
-        return x.view(x.size(0), *self.shape)
+from slim import Reshape, Flatten
 
 class Generator(nn.Module):
     def __init__(self, config):
