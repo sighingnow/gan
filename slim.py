@@ -37,6 +37,6 @@ def one_hot(labels, nlabels):
             tensor([[ 0.,  0.,  1.],
                     [ 0.,  1.,  0.]])
     '''
-    assert len(labels.size()) == 2 and labels.size(1) == 1, "The one_hot exepcts a 1-D tensor as input"
+    assert len(labels.size()) == 2 and labels.size(1) == 1, "The one_hot exepcts a 2-D tensor as input"
     mask = torch.zeros(labels.size(0), nlabels)
     return mask.scatter_(1, labels, torch.ones(labels.size()))
